@@ -6,60 +6,97 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.colors as mplcolors
 import cv2
-import helper2
+import scipy.misc
 
 
-def normalize_img(image, option=0):
-
-    image = image.astype('float64')
-
-    for color in range(3):
-        min_val = image[:, :, color].min()
-        min_val = min_val.astype('float64')
-        max_val = image[:, :, color].max()
-        max_val = max_val.astype('float64')
-
-        val_range = (max_val - min_val)
-
-        ###### Normalize for range 0, 1
-        if option == 0:
-            image[:, :, color] = (
-                image[:, :, color] - (min_val)) / (val_range)
-        ###### Normalize for range -1, 1
-        elif option == 1:
-            image[:, :, color] = (
-                image[:, :, color] - (val_range/2 + min_val)) / (val_range/2)
-
-    return image
+def normalize_img(image, range=[0, 255]):
+    normalizedImg = np.zeros(image.shape[:2])
+    normalizedImg = cv2.normalize(
+        image,  normalizedImg, range[0], range[1], cv2.NORM_MINMAX)
+    return normalizedImg
 
 
-def augmen_img(old_img_X, old_img_Y, aug_ranges=[0.5, 0.08, 8, 2, 3], plot=0):
+def noise_generator(noise_type, image, amount=0.001):
+    # Source of the code is based on an excelent piece code from stackoverflow
+    # http://stackoverflow.com/questions/22937589/how-to-add-noise-gaussian-salt-and-pepper-etc-to-image-in-python-with-opencv
+    """
+    Generate noise to a given Image based on required noise type
+
+    Input parameters:
+        image: ndarray (input image data. It will be converted to float)
+
+        noise_type: string
+            'gauss'        Gaussian-distrituion based noise
+            'poission'     Poission-distribution based noise
+            's&p'          Salt and Pepper noise, 0 or 1
+            'speckle'      Multiplicative noise using out = image + n*image
+                           where n is uniform noise with specified mean & variance
+    """
+    row, col, ch = image.shape
+    if noise_type == "gauss":
+        mean = 0.0
+        var = amount*5
+        sigma = var**0.5
+        gauss = np.array(image.shape)
+        gauss = np.random.normal(mean, sigma, (row, col, ch))
+        gauss = gauss.reshape(row, col, ch)
+        noisy = image + gauss
+        return noisy.astype('uint8')
+    elif noise_type == "s&p":
+        s_vs_p = 0.5
+        # amount = 0.004
+        out = image
+        # Generate Salt '1' noise
+        num_salt = np.ceil(amount * image.size * s_vs_p)
+        coords = [np.random.randint(0, i - 1, int(num_salt))
+                  for i in image.shape]
+        out[coords] = 255
+        # Generate Pepper '0' noise
+        num_pepper = np.ceil(amount * image.size * (1. - s_vs_p))
+        coords = [np.random.randint(0, i - 1, int(num_pepper))
+                  for i in image.shape]
+        out[coords] = 0
+        return out
+    elif noise_type == "poisson":
+        vals = len(np.unique(image))
+        vals = 2 ** np.ceil(np.log2(vals))
+        noisy = np.random.poisson(image * vals) / float(vals)
+        return noisy
+    elif noise_type == "speckle":
+        gauss = np.random.randn(row, col, ch)
+        gauss = gauss.reshape(row, col, ch)
+        noisy = image + image * gauss
+        return noisy
+    else:
+        return image
+
+
+def augmen_img(old_img_X, old_img_Y, aug_ranges=[0.5, 0.08, 8, 2, 3, 0.004], plot=0):
 
     img_X = old_img_X.copy()
     img_Y = old_img_Y.copy()
     y, x = img_X.shape[:2]
+
+    img_Y = img_Y.astype('float64')
+    img_Y = img_Y.astype('float64')
 
     range_colorshift = aug_ranges[0]
     range_zoom = aug_ranges[1]
     range_rotate = aug_ranges[2]
     range_move = aug_ranges[3]
     warp_factor = aug_ranges[4]
+    noise_amount = aug_ranges[4]
 
-    ######################## COLORSHIFT
+    # COLORSHIFT
     if range_colorshift is not 0:
-        
-        # img_X = img_X.astype('float64')
-        
+
         for color in range(3):
-
             rand_shift = np.random.uniform(1 - range_colorshift, 1)
-
             img_X[:, :, color] = img_X[:, :, color] * rand_shift
-        
-        # img_X = img_X.astype(np.uint16)
-        
 
-    ######################## WARP
+        # img_X = img_X.astype(np.uint16)
+
+    # WARP
     if warp_factor is not 0:
         f1 = random.uniform(-1, 1)
         f2 = random.uniform(-1, 1)
@@ -73,7 +110,7 @@ def augmen_img(old_img_X, old_img_Y, aug_ranges=[0.5, 0.08, 8, 2, 3], plot=0):
         img_X = cv2.warpAffine(img_X, M, (x, y))
         img_Y = cv2.warpAffine(img_Y, M, (x, y))
 
-    ######################## ZOOM
+    # ZOOM
     if range_zoom is not 0:
         zoom_factor = random.uniform(1 - range_zoom, 1 + range_zoom)
 
@@ -90,7 +127,7 @@ def augmen_img(old_img_X, old_img_Y, aug_ranges=[0.5, 0.08, 8, 2, 3], plot=0):
         img_X = cv2.warpAffine(img_X, M, (x, y))
         img_Y = cv2.warpAffine(img_Y, M, (x, y))
 
-    ########################## ROTATE
+    # ROTATE
     if range_rotate is not 0:
         angle = np.random.randint(-range_rotate, range_rotate)
 
@@ -98,7 +135,7 @@ def augmen_img(old_img_X, old_img_Y, aug_ranges=[0.5, 0.08, 8, 2, 3], plot=0):
         img_X = cv2.warpAffine(img_X, M, (x, y))
         img_Y = cv2.warpAffine(img_Y, M, (x, y))
 
-    ####################### MOVE
+    # MOVE
     if range_move is not 0:
         dx = np.random.randint(-range_move, range_move)
         dy = np.random.randint(-range_move, range_move)
@@ -125,8 +162,15 @@ def augmen_img(old_img_X, old_img_Y, aug_ranges=[0.5, 0.08, 8, 2, 3], plot=0):
             img_X[dy:, :, :] = 0
             img_Y[dy:, :, :] = 0
 
-    flags = np.any(img_Y != [1., 0., 1.], axis=-1)
-    img_Y[flags] = [1.0, 0., 0.]
+    # NOISE
+    if noise_amount is not 0:
+        img_X = noise_generator("s&p", img_X)
+
+    flags = np.any(img_Y != [255., 0., 255.], axis=-1)
+    img_Y[flags] = [255.0, 0., 0.]
+
+    img_Y = img_Y.astype(np.int16)
+    img_Y = img_Y.astype(np.int16)
 
     if plot:
         fig, axs = plt.subplots(2, 2, figsize=(15, 15))

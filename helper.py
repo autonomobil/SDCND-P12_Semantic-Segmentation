@@ -15,6 +15,7 @@ import shutil
 import zipfile
 import time
 import tensorflow as tf
+import helper2
 from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
@@ -105,7 +106,9 @@ def gen_batch_function(data_folder, image_shape):
 			for image_file in image_paths[batch_i:batch_i+batch_size]:
 				gt_image_file = label_paths[os.path.basename(image_file)]
 				# Re-size to image_shape
-				image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+				image = scipy.misc.imread(image_file)
+				image = helper2.normalize_img(image)
+				image = scipy.misc.imresize(image, image_shape)
 				gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
 
 				# Create "one-hot-like" labels by class
@@ -132,7 +135,9 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 	:return: Output for for each test image
 	"""
 	for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
-		image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+		image = scipy.misc.imread(image_file)
+		image = helper2.normalize_img(image)
+		image = scipy.misc.imresize(image, image_shape)
 
 		# Run inference
 		im_softmax = sess.run(

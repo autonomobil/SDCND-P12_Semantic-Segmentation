@@ -103,8 +103,8 @@ ENV/
 # mypy
 .mypy_cache/
 
-runs/
 .vscode/
+data/data_road_2/
 
 data_road/
 vgg/
@@ -113,5 +113,5 @@ gtFine_trainvaltest/
 vgg16.npy
 
 
-saver/model.meta
-saver/model.data-00000-of-00001
+saver/
+test.py
