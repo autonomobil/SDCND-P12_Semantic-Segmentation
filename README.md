@@ -20,6 +20,7 @@ ___
 In this project, a Fully Convolutional Network (FCN) is used to label the pixels of a road in images. It is trained on the [Kitti Road dataset](http://www.cvlibs.net/datasets/kitti/eval_road.php).
 
 Some results:
+
 ![img1]
 ![img2]
 ![img3]
@@ -35,22 +36,23 @@ These files were added:
 *  `helper2.py`
 
 
-###Augmentation
+### Augmentation
 The Kitti road dataset was augmented, by flipping, adding noise, zoom, warp, moving and colorshifting, see [augment_data.py](./augment_data.py).
 
 Examples:
+
 ![img7] ![img8]
 ![img9] ![img10]
 
-###Fully Convolutional Network (FCN)
-####Structure
+### Fully Convolutional Network (FCN)
+#### Structure
 ![img4]
-#####Why Layer skip 3, 4 and 7?
+##### Why Layer skip 3, 4 and 7?
 In `main.py`, layers 3, 4 and 7 of VGG16 are utilized in creating skip layers for a fully convolutional network. The reasons for this are contained in the paper [Fully Convolutional Networks for Semantic Segmentation](https://arxiv.org/pdf/1605.06211.pdf).
 
 In section 4.3, and further under header "Skip Architectures for Segmentation" and Figure 3, they note these provided for 8x, 16x and 32x upsampling, respectively. Using each of these in their FCN-8s was the most effective architecture they found. 
 
-####Training 
+#### Training 
 
 + keep_prob: 0.45
 + learning_rate: 0.0001
@@ -64,7 +66,7 @@ In section 4.3, and further under header "Skip Architectures for Segmentation" a
 
 
 ______________________________
-####Notes: GPU
+#### Notes: GPU
 `main.py` will check to make sure a GPU is available
 
 
