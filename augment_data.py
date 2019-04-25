@@ -12,7 +12,7 @@ import imageio
 
 X_images_link = glob.glob("./data/data_road/training/image_2/u*.png")
 Y_image_link = []  # glob.glob('./data/data_road/training/gt_image_2/u*.png')
-flip = False
+flip = True
 
 if flip:
     # Flip Vertically, save normalized old and normalized flipped version
@@ -35,10 +35,17 @@ if flip:
         old_img_X = helper2.normalize_img(old_img_X)
         new_img_X = helper2.normalize_img(new_img_X)
 
-        old_img_X = cv2.cvtColor(old_img_X, cv2.COLOR_BGR2RGB)
-        new_img_X = cv2.cvtColor(new_img_X, cv2.COLOR_BGR2RGB)
-        old_img_Y = cv2.cvtColor(old_img_Y, cv2.COLOR_BGR2RGB)
-        new_img_Y = cv2.cvtColor(new_img_Y, cv2.COLOR_BGR2RGB)
+        # BGR 2 RGB 
+        old_img_X = old_img_X [..., ::-1]
+        new_img_X = new_img_X [..., ::-1]
+        
+        old_img_Y = old_img_Y [..., ::-1]
+        new_img_Y = new_img_Y [..., ::-1]
+
+        # old_img_X = cv2.cvtColor(old_img_X, cv2.COLOR_BGR2RGB)
+        # new_img_X = cv2.cvtColor(new_img_X, cv2.COLOR_BGR2RGB)
+        # old_img_Y = cv2.cvtColor(old_img_Y, cv2.COLOR_BGR2RGB)
+        # new_img_Y = cv2.cvtColor(new_img_Y, cv2.COLOR_BGR2RGB)
 
         cv2.imwrite("./data/data_road/training/image_2/" +
                     base_name_X + "1.png", new_img_X)
@@ -83,9 +90,9 @@ for i in range(len(X_images_link)):
         # new_img_X = cv2.cvtColor(new_img_X, cv2.COLOR_BGR2RGB)
         # new_img_Y = cv2.cvtColor(new_img_Y, cv2.COLOR_BGR2RGB)
 
-        cv2.imwrite("./data/data_road_2/training/image_2/" +
-                    base_name_X + "{}.png".format(no_augmen),
+        cv2.imwrite("./data/data_road/training/image_2/" +
+                    base_name_X + "0{}.png".format(no_augmen),
                     new_img_X)
-        cv2.imwrite("./data/data_road_2/training/gt_image_2/" +
-                    base_name_Y + "{}.png".format(no_augmen),
+        cv2.imwrite("./data/data_road/training/gt_image_2/" +
+                    base_name_Y + "0{}.png".format(no_augmen),
                     new_img_Y)

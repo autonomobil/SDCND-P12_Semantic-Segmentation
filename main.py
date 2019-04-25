@@ -1,7 +1,10 @@
 import os.path
 import tensorflow as tf
 import helper
+import helper2
 import warnings
+import os
+from glob import glob
 from distutils.version import LooseVersion
 import project_tests as tests
 
@@ -55,8 +58,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    reg_factor = 1e-3
-    weights_init_factor = 1e-2
+    reg_factor = 2e-3
+    weights_init_factor = 5e-2
 
     # 1x1 convolution of vgg layer 7
     conv_1x1_layer7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='same',
@@ -123,7 +126,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     # Loss
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
     reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    reg_constant = 1e-4
+    reg_constant = 1e-3
     loss = cross_entropy_loss + reg_constant * sum(reg_losses)
 
     # Optimizer
@@ -142,7 +145,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param batch_size: Batch size
     :param get_batches_fn: Function to get batches of training data.  Call using get_batches_fn(batch_size)
     :param train_op: TF Operation to train the neural network
-    :param cross_entropy_loss: TF Tensor for the amount of loss
+    :param cross_entropy_loss: TF Tensor for the amount of loss, cross entropy + regularization
     :param input_image: TF Placeholder for input images
     :param correct_label: TF Placeholder for label images
     :param keep_prob: TF Placeholder for dropout keep probability
@@ -150,17 +153,32 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     # Init
     sess.run(tf.global_variables_initializer())
+
+    if type(batch_size) is list:
+        no_images_total = batch_size[1]
+        batch_size = batch_size[0]
+        progress_bar = True
+        print("progress bar activated")
+    else:        
+        progress_bar = False
+
+
     for epoch in range(epochs):
-        print("EPOCH {} ".format(epoch+1))
+        no_batch = 0
+        sum_loss = 0
 
         for image, label in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
             feed_dict={input_image: image, correct_label: label, keep_prob: 0.45, learning_rate: 0.0001})
-            
-            print("Loss: = {:.5f}".format(loss))
-        print()
-    
+            no_batch += batch_size
+            sum_loss = sum_loss + loss
+
+            if progress_bar:
+                helper2.progress(no_batch, no_images_total, status="Training: Epoch {} ...".format(epoch+1))
+
+        print("Mean Loss:{:.5f}".format(sum_loss/no_batch))
     pass
+
 tests.test_train_nn(train_nn)
 
 
@@ -169,6 +187,7 @@ def run():
     image_shape = (160, 576)  # KITTI dataset uses 160x576 images
     data_dir = './data'
     runs_dir = './runs'
+    save_model_path = './saver/model'
     tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
@@ -182,11 +201,13 @@ def run():
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
-        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
-
+        data_folder = os.path.join(data_dir, 'data_road/training')
+        no_images_total = len(glob(os.path.join(data_folder, 'image_2', '*.png')))
+        get_batches_fn = helper.gen_batch_function(data_folder, image_shape)
+        
         # Training hyperparameters
-        epochs = 120
-        batch_size = 5
+        epochs = 40
+        batch_size = [8, no_images_total] # progress bar activated
 
         # Build NN using load_vgg, layers, and optimize function
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes], name='correct_label')
@@ -196,13 +217,18 @@ def run():
 
         nn_last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
 
-        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
+        logits, train_op, loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
         # Train NN using the train_nn function
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, vgg_input,
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, loss, vgg_input,
              correct_label, keep_prob, learning_rate)
 
-        #  Save inference data using helper.save_inference_samples
+        # save model
+        saver = tf.train.Saver()
+        save_path = saver.save(sess, save_model_path)
+        print("Saved model to " + save_path)
+
+        #  Save inference data using helper.save_inference_samples to ./runs
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, vgg_input)
 
         # OPTIONAL: Apply the trained model to a video
