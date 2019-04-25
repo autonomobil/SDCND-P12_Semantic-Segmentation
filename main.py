@@ -126,7 +126,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     # Loss
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
     reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    reg_constant = 1e-3
+    reg_constant = 5e-3
     loss = cross_entropy_loss + reg_constant * sum(reg_losses)
 
     # Optimizer
@@ -169,7 +169,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 
         for image, label in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
-            feed_dict={input_image: image, correct_label: label, keep_prob: 0.45, learning_rate: 0.0001})
+            feed_dict={input_image: image, correct_label: label, keep_prob: 0.475, learning_rate: 0.0001})
             no_batch += batch_size
             sum_loss = sum_loss + loss
 
@@ -206,7 +206,7 @@ def run():
         get_batches_fn = helper.gen_batch_function(data_folder, image_shape)
         
         # Training hyperparameters
-        epochs = 40
+        epochs = 100
         batch_size = [8, no_images_total] # progress bar activated
 
         # Build NN using load_vgg, layers, and optimize function
@@ -222,6 +222,8 @@ def run():
         # Train NN using the train_nn function
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, loss, vgg_input,
              correct_label, keep_prob, learning_rate)
+
+        print("Training finished ")
 
         # save model
         saver = tf.train.Saver()

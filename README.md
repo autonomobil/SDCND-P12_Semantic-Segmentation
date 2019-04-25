@@ -54,11 +54,11 @@ In section 4.3, and further under header "Skip Architectures for Segmentation" a
 
 #### Training 
 
-+ keep_prob: 0.45
++ keep_prob: 0.475
 + learning_rate: 0.0001
 + epochs: 100
 + batch_size: 8
-+ L2-Regularizer on each layer
++ L2-Regularizer on each layer, reg_factor = 2e-3
 + Adam-Optimizer
 + Cross-entropy-loss
 
